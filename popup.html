@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <style>
         body {
-            width: 300px;
+            width: 400px;
             padding: 15px;
             font-family: Arial, sans-serif;
         }
@@ -16,6 +16,7 @@
             font-size: 14px;
             line-height: 1.4;
             color: #333;
+            margin-bottom: 15px;
         }
         .status {
             margin-top: 10px;
@@ -24,13 +25,51 @@
             border-radius: 4px;
             color: #2e7d32;
         }
+        .test-cases-area {
+            width: 100%;
+            min-height: 200px;
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .button {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .button:active {
+            background-color: #3d8b40;
+        }
+        .buttons-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
     <h2 class="title">Test Case Helper</h2>
     <div class="description">
-        Hover over interactive elements on the page to see suggested test cases and highlighting.
+        Generate test cases for the current page or hover over elements to see suggestions.
     </div>
+    <div class="buttons-container">
+        <button id="generateTest" class="button">Generate Test</button>
+        <button id="copyToClipboard" class="button">Copy to Clipboard</button>
+    </div>
+    <textarea id="testCasesArea" class="test-cases-area" placeholder="Test cases will appear here..."></textarea>
     <div class="status">
         ✓ Extension is active and running
     </div>
@@ -38,5 +77,6 @@
         <p>Created by <a href="https://serhii-tkachenko.com" target="_blank">Serhii Tkachenko</a></p>
         <p>Support: <a href="mailto:me@serhii-tkachenko.com">me@serhii-tkachenko.com</a></p>
     </div>
+    <script src="popup.js"></script>
 </body>
 </html>

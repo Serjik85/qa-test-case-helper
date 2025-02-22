@@ -1,3 +1,25 @@
+// Listen for messages from the popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "getAllTestCases") {
+        const testCases = getAllTestCasesFromPage();
+        sendResponse({ testCases });
+    }
+    return true;
+});
+
+// Function to collect all test cases from interactive elements on the page
+function getAllTestCasesFromPage() {
+    const interactiveElements = document.querySelectorAll('button, input, select, a, form, [role="button"]');
+    const allTestCases = new Set();
+
+    interactiveElements.forEach(element => {
+        const testCases = getTestCases(element);
+        testCases.forEach(testCase => allTestCases.add(testCase));
+    });
+
+    return Array.from(allTestCases);
+}
+
 // Test case suggestions for different element types
 const testCaseSuggestions = {
     button: [
