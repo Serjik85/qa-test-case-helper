@@ -4,34 +4,110 @@
     background-color: rgba(76, 175, 80, 0.1) !important;
 }
 
-.qa-helper-tooltip {
-    position: absolute;
+.qa-helper-tooltip-container {
+    position: fixed;
     z-index: 10000;
-    background-color: #333;
-    color: white;
-    padding: 15px;
-    border-radius: 6px;
-    font-size: 14px;
-    max-width: 400px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     display: none;
-    font-family: Arial, sans-serif;
-    line-height: 1.4;
 }
 
+/* Tooltip arrow when positioned below element */
 .qa-helper-tooltip::before {
     content: '';
     position: absolute;
-    top: -10px;
-    left: 10px;
-    border-width: 0 10px 10px 10px;
+    top: -8px;
+    left: 20px;
     border-style: solid;
-    border-color: transparent transparent #333 transparent;
+    border-width: 0 8px 8px 8px;
+    border-color: transparent transparent rgba(51, 51, 51, 0.98) transparent;
+}
+
+/* Tooltip arrow when positioned above element */
+.qa-helper-tooltip-container.tooltip-above .qa-helper-tooltip::before {
+    top: auto;
+    bottom: -8px;
+    border-width: 8px 8px 0 8px;
+    border-color: rgba(51, 51, 51, 0.98) transparent transparent transparent;
+}
+
+.qa-helper-tooltip {
+    background-color: rgba(51, 51, 51, 0.98);
+    color: white;
+    padding: 15px;
+    padding-top: 40px; /* Space for buttons */
+    border-radius: 8px;
+    font-size: 14px;
+    width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.5;
+    position: relative;
+    pointer-events: auto;
+    backdrop-filter: blur(5px);
+}
+
+.qa-helper-close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 6px;
+    border-radius: 4px;
+}
+
+.qa-helper-close-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.qa-helper-copy-button {
+    position: absolute;
+    top: 10px;
+    right: 70px;
+    background: #4CAF50;
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.qa-helper-copy-button:hover {
+    background-color: #45a049;
+}
+
+.qa-helper-lock-button {
+    position: absolute;
+    top: 10px;
+    right: 40px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.qa-helper-lock-button:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.qa-helper-lock-button.locked {
+    opacity: 1;
+    color: #4CAF50;
 }
 
 .qa-helper-tooltip .tooltip-content {
     max-height: 400px;
     overflow-y: auto;
+    padding-right: 10px;
 }
 
 .qa-helper-tooltip strong {
@@ -63,4 +139,23 @@
     margin: 5px 0;
     font-size: 13px;
     line-height: 1.4;
+}
+
+/* Custom scrollbar for webkit browsers */
+.qa-helper-tooltip .tooltip-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.qa-helper-tooltip .tooltip-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.qa-helper-tooltip .tooltip-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.qa-helper-tooltip .tooltip-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }

@@ -7,8 +7,11 @@ This Chrome extension helps QA engineers and testers by highlighting testable el
 
 - Automatically highlights interactive elements (buttons, forms, inputs, links) when hovering
 - Shows a tooltip with suggested test cases for each element type
-- Provides specific test case suggestions based on element type
+- Provides specific test case suggestions based on element type and context
+- Easy test case copying with a single click or via copy button
+- Success message feedback for copy operations
 - Non-intrusive visual indicators
+- Tooltip stays visible while interacting with its buttons
 
 ## Installation
 
@@ -16,6 +19,10 @@ This Chrome extension helps QA engineers and testers by highlighting testable el
 2. Enable "Developer mode" in the top right corner
 3. Click "Load unpacked" and select the extension directory
 4. The extension icon should appear in your Chrome toolbar
+5. **Important:** Pin the extension to your toolbar to ensure all functionality works correctly
+   - Click the puzzle piece icon in Chrome toolbar
+   - Find "QA Test Case Helper" in the dropdown
+   - Click the pin icon next to it
 
 ## Usage
 
@@ -47,7 +54,7 @@ If you encounter any issues or have suggestions for improvement, please feel fre
 
 ## License
 
-Copyright © 2024 Serhii Tkachenko. All rights reserved.
+Copyright © 2025 Serhii Tkachenko
 =======
 # qa-test-case-helper
 >>>>>>> e40719e3d8779918539f7f90f1aa2a21be3dcff1

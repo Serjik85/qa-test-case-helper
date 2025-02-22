@@ -1,6 +1,146 @@
+// Global variables for tooltip state and elements
+let tooltipContainer = null;
+let tooltip = null;
+let closeButton = null;
+let copyButton = null;
+let lockButton = null;
+let isTooltipLocked = false;
+let isTooltipHovered = false;
+let currentElement = null;
+
+// Initialize the extension
+function initializeExtension() {
+    try {
+        // Remove any existing tooltip containers
+        const existingContainer = document.querySelector('.qa-helper-tooltip-container');
+        if (existingContainer) {
+            existingContainer.remove();
+        }
+
+        // Create tooltip element with fixed positioning
+        tooltipContainer = document.createElement('div');
+        tooltipContainer.className = 'qa-helper-tooltip-container';
+        document.body.appendChild(tooltipContainer);
+
+        tooltip = document.createElement('div');
+        tooltip.className = 'qa-helper-tooltip';
+        tooltipContainer.appendChild(tooltip);
+
+        // Add hover handlers to tooltip
+        tooltipContainer.addEventListener('mouseenter', () => {
+            isTooltipHovered = true;
+        });
+
+        tooltipContainer.addEventListener('mouseleave', () => {
+            isTooltipHovered = false;
+            if (!isTooltipLocked) {
+                hideTooltip();
+            }
+        });
+
+        // Create close button
+        closeButton = document.createElement('button');
+        closeButton.className = 'qa-helper-close-button';
+        closeButton.innerHTML = '×';
+        closeButton.setAttribute('data-testid', 'qa-helper-close-button');
+        closeButton.setAttribute('aria-label', 'Close test case tooltip');
+        closeButton.title = 'Close test case tooltip';
+        tooltip.appendChild(closeButton);
+
+        // Create copy button
+        copyButton = document.createElement('button');
+        copyButton.className = 'qa-helper-copy-button';
+        copyButton.innerHTML = 'Copy Test Cases';
+        copyButton.setAttribute('data-testid', 'qa-helper-copy-button');
+        copyButton.setAttribute('aria-label', 'Copy test cases to clipboard');
+        copyButton.title = 'Copy test cases to clipboard';
+        tooltip.appendChild(copyButton);
+
+        // Create lock button
+        lockButton = document.createElement('button');
+        lockButton.className = 'qa-helper-lock-button';
+        lockButton.innerHTML = '🔒'; // Lock emoji
+        lockButton.setAttribute('data-testid', 'qa-helper-lock-button');
+        lockButton.setAttribute('aria-label', 'Lock test case tooltip');
+        lockButton.title = 'Lock test case tooltip';
+        tooltip.appendChild(lockButton);
+
+        // Add event listeners
+        closeButton.addEventListener('click', () => {
+            isTooltipLocked = false;
+            lockButton.classList.remove('locked');
+            lockButton.innerHTML = '🔓'; // Unlocked emoji
+            hideTooltip();
+        });
+
+        function showCopiedMessage(x, y) {
+            const successMessage = document.createElement('div');
+            successMessage.className = 'copy-success-message';
+            successMessage.textContent = 'Test cases copied!';
+            successMessage.style.position = 'fixed';
+            successMessage.style.left = `${x}px`;
+            successMessage.style.top = `${y}px`;
+            successMessage.style.backgroundColor = '#4CAF50';
+            successMessage.style.color = 'white';
+            successMessage.style.padding = '5px 10px';
+            successMessage.style.borderRadius = '3px';
+            successMessage.style.zIndex = '10000';
+            document.body.appendChild(successMessage);
+
+            setTimeout(() => {
+                successMessage.style.opacity = '0';
+                successMessage.style.transition = 'opacity 0.5s';
+                setTimeout(() => successMessage.remove(), 500);
+            }, 1000);
+        }
+
+        function copyTestCases(element, event) {
+            const testCasesText = formatTestCasesForCopy(element);
+            if (!testCasesText) return;
+
+            navigator.clipboard.writeText(testCasesText).then(() => {
+                // Show success message near the click position
+                const x = event ? event.clientX + 10 : element.getBoundingClientRect().right + 10;
+                const y = event ? event.clientY - 20 : element.getBoundingClientRect().top - 10;
+                showCopiedMessage(x, y);
+
+                // Update button text temporarily
+                if (copyButton) {
+                    copyButton.innerHTML = 'Copied!';
+                    setTimeout(() => {
+                        copyButton.innerHTML = 'Copy Test Cases';
+                    }, 2000);
+                }
+            });
+        }
+
+        copyButton.addEventListener('click', (e) => {
+            if (currentElement) {
+                copyTestCases(currentElement, e);
+            }
+        });
+
+        lockButton.addEventListener('click', () => {
+            isTooltipLocked = !isTooltipLocked;
+            lockButton.classList.toggle('locked');
+            lockButton.innerHTML = isTooltipLocked ? '🔒' : '🔓'; // Lock/unlock emoji
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Error initializing extension:', error);
+        return false;
+    }
+}
+
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "getAllTestCases") {
+    console.log('Received message:', request); // Debug log
+
+    if (request.action === 'ping') {
+        const isInitialized = initializeExtension();
+        sendResponse({ status: isInitialized ? 'ok' : 'error' });
+    } else if (request.action === 'getAllTestCases') {
         try {
             const testCases = getAllTestCasesFromPage();
             console.log('Generated test cases:', testCases); // Debug log
@@ -12,6 +152,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true; // Keep the message channel open for async response
 });
+
+// Initialize extension when the script loads
+initializeExtension();
 
 // Function to collect all test cases from interactive elements on the page
 function getAllTestCasesFromPage() {
@@ -68,19 +211,64 @@ function getElementUniqueKey(element) {
 
 // Function to get a human-readable identifier for an element
 function getElementIdentifier(element) {
-    const id = element.id ? `#${element.id}` : '';
-    const text = element.textContent?.trim();
-    const value = element.value;
-    const type = element.type;
-    const placeholder = element.placeholder;
+    if (!element) return '';
 
-    if (id) return id;
-    if (text && text.length < 50) return `"${text}"`;
-    if (placeholder) return `[placeholder="${placeholder}"]`;
-    if (value) return `[value="${value}"]`;
-    if (type) return `[type="${type}"]`;
-    
-    return element.tagName.toLowerCase();
+    // Array of possible identifiers in order of preference
+    const identifiers = [];
+
+    // Get data-testid attribute
+    const testId = element.getAttribute('data-testid');
+    if (testId) identifiers.push(`[data-testid="${testId}"]`);
+
+    // Get aria-label attribute
+    const ariaLabel = element.getAttribute('aria-label');
+    if (ariaLabel) identifiers.push(`[aria-label="${ariaLabel}"]`);
+
+    // Get title attribute
+    const title = element.getAttribute('title');
+    if (title) identifiers.push(`[title="${title}"]`);
+
+    // Get element's id
+    const id = element.id;
+    if (id) identifiers.push(`#${id}`);
+
+    // Get element's name attribute
+    const name = element.getAttribute('name');
+    if (name) identifiers.push(`[name="${name}"]`);
+
+    // Get element's text content
+    const text = element.textContent?.trim();
+    if (text && text.length < 50 && !/^[\u2000-\u3300\ud83c\ud000-\ud83d\udfff\ud83e\ud000-\ud83e\udfff]+$/.test(text)) {
+        identifiers.push(`"${text}"`);
+    }
+
+    // Get element's value
+    const value = element.value;
+    if (value && value.length < 50) identifiers.push(`[value="${value}"]`);
+
+    // Get element's placeholder
+    const placeholder = element.placeholder;
+    if (placeholder) identifiers.push(`[placeholder="${placeholder}"]`);
+
+    // Get element's type
+    const type = element.getAttribute('type');
+    if (type) identifiers.push(`[type="${type}"]`);
+
+    // Get element's role
+    const role = element.getAttribute('role');
+    if (role) identifiers.push(`[role="${role}"]`);
+
+    // Return the most meaningful identifier or combination of identifiers
+    if (identifiers.length > 0) {
+        // If we have multiple identifiers, combine the most meaningful ones
+        if (identifiers.length > 1) {
+            return `${identifiers[0]} ${identifiers[1]}`;
+        }
+        return identifiers[0];
+    }
+
+    // If no identifiers found, return element tag name
+    return `<${element.tagName.toLowerCase()}>`;
 }
 
 // Function to format a test case with element information
@@ -317,41 +505,238 @@ const testCaseSuggestions = {
     ]
 };
 
-// Create tooltip element
-const tooltip = document.createElement('div');
-tooltip.className = 'qa-helper-tooltip';
-document.body.appendChild(tooltip);
+
+
+// Function to show tooltip
+function showTooltip(element, testCases) {
+    if (isTooltipLocked && element !== currentElement) {
+        return; // Don't show tooltip for other elements when locked
+    }
+
+    currentElement = element;
+    const elementRect = element.getBoundingClientRect();
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+
+    // First display the tooltip to calculate its size
+    tooltipContainer.style.display = 'block';
+    tooltipContainer.style.visibility = 'hidden'; // Hide it temporarily
+
+    // Clear previous content
+    const existingContent = tooltip.querySelector('.tooltip-content');
+    if (existingContent) {
+        existingContent.remove();
+    }
+
+    // Create and append new content
+    const content = document.createElement('div');
+    content.className = 'tooltip-content';
+    content.innerHTML = testCases;
+    tooltip.appendChild(content);
+
+    // Calculate available space
+    const tooltipRect = tooltipContainer.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - elementRect.bottom;
+    const spaceAbove = elementRect.top;
+
+    // Position the tooltip
+    let top;
+    if (spaceBelow < tooltipRect.height && spaceAbove > tooltipRect.height) {
+        // If not enough space below but enough space above, show above the element
+        top = elementRect.top + scrollY - tooltipRect.height;
+        tooltipContainer.classList.add('tooltip-above');
+    } else {
+        // Show below the element
+        top = elementRect.bottom + scrollY;
+        tooltipContainer.classList.remove('tooltip-above');
+    }
+
+    // Calculate horizontal position to keep tooltip within viewport
+    const viewportWidth = window.innerWidth;
+    let left = elementRect.left + scrollX;
+    if (left + tooltipRect.width > viewportWidth) {
+        left = viewportWidth - tooltipRect.width - 10; // 10px padding from viewport edge
+    }
+    if (left < 0) left = 10; // 10px padding from viewport edge
+
+    // Apply final position
+    tooltipContainer.style.left = left + 'px';
+    tooltipContainer.style.top = top + 'px';
+    tooltipContainer.style.visibility = 'visible'; // Make it visible again
+}
+
+// Function to hide tooltip
+function hideTooltip() {
+    if (isTooltipLocked) return;
+    
+    tooltipContainer.style.display = 'none';
+    if (currentElement) {
+        currentElement.classList.remove('qa-helper-highlight');
+    }
+    currentElement = null;
+}
 
 // Function to get element type and generate test cases
 function getTestCases(element) {
+    // Ignore elements inside our tooltip
+    if (!element || tooltipContainer.contains(element)) return null;
+
     const tagName = element.tagName.toLowerCase();
     const type = element.getAttribute('type');
     const role = element.getAttribute('role');
+    const ariaLabel = element.getAttribute('aria-label') || '';
+    const placeholder = element.getAttribute('placeholder') || '';
+    const elementText = element.textContent?.trim() || '';
+
+    // Determine element's purpose from its attributes
+    const purpose = ariaLabel || placeholder || elementText || type || role || tagName;
 
     if (element.matches('button, input[type="button"], input[type="submit"]')) {
-        return testCaseSuggestions.button;
-    } else if (element.matches('input')) {
-        return testCaseSuggestions.input;
+        return [{
+            title: "Button Functionality",
+            steps: [
+                `1. Verify button "${purpose}" is visible and enabled`,
+                `2. Check button text/icon is correctly displayed`,
+                `3. Click the button and verify expected action occurs`,
+                `4. Verify button state changes appropriately (if applicable)`,
+                `5. Test keyboard accessibility (Tab focus and Enter key)`
+            ]
+        }];
+    } else if (element.matches('input[type="text"], input:not([type])')) {
+        return [{
+            title: "Text Input Validation",
+            steps: [
+                `1. Verify input field "${purpose}" is visible and enabled`,
+                `2. Check placeholder text is displayed correctly (if applicable)`,
+                `3. Enter valid text and verify it's accepted`,
+                `4. Test field restrictions (max length, allowed characters)`,
+                `5. Verify input field handles special characters correctly`
+            ]
+        }];
+    } else if (element.matches('input[type="search"]')) {
+        return [{
+            title: "Search Input Testing",
+            steps: [
+                `1. Verify search input "${purpose}" is visible and accessible`,
+                `2. Enter search term and verify search triggers correctly`,
+                `3. Test search with different types of queries`,
+                `4. Verify search results are displayed appropriately`,
+                `5. Check search input clears correctly`
+            ]
+        }];
     } else if (element.matches('form')) {
-        return testCaseSuggestions.form;
+        return [{
+            title: "Form Validation",
+            steps: [
+                `1. Verify all form fields are visible and properly labeled`,
+                `2. Test form submission with valid data`,
+                `3. Verify form validation for required fields`,
+                `4. Test form submission with invalid data`,
+                `5. Check form reset functionality`
+            ]
+        }];
     } else if (element.matches('a')) {
-        return testCaseSuggestions.link;
+        return [{
+            title: "Link Functionality",
+            steps: [
+                `1. Verify link "${purpose}" is visible and properly styled`,
+                `2. Check link href points to correct destination`,
+                `3. Test link click navigates to expected page`,
+                `4. Verify link state changes on hover/visited`,
+                `5. Test keyboard accessibility (Tab focus and Enter key)`
+            ]
+        }];
     } else if (element.matches('select')) {
-        return testCaseSuggestions.select;
+        return [{
+            title: "Dropdown Functionality",
+            steps: [
+                `1. Verify dropdown "${purpose}" is visible and enabled`,
+                `2. Check all options are displayed correctly`,
+                `3. Test selection of different options`,
+                `4. Verify selected option is properly displayed`,
+                `5. Test keyboard navigation through options`
+            ]
+        }];
     }
 
-    return ["Check functionality", "Verify display", "Test interaction"];
+    // Default test cases for any interactive element
+    return [{
+        title: `UI Element Testing`,
+        steps: [
+            `1. Verify "${purpose}" element is visible and accessible`,
+            `2. Check element's visual appearance matches design`,
+            `3. Test element's primary interaction method`,
+            `4. Verify element responds correctly to user input`,
+            `5. Test keyboard accessibility if applicable`
+        ]
+    }];
 }
 
-// Add hover listeners to interactive elements
+// Function to format test cases for copying
+function formatTestCasesForCopy(element) {
+    const testCases = getTestCases(element);
+    if (!testCases) return '';
+
+    const elementIdentifier = getElementIdentifier(element);
+    let formattedText = `Element: ${element.tagName.toLowerCase()} ${elementIdentifier}\n\n`;
+
+    testCases.forEach(tc => {
+        formattedText += `• ${tc.title}\n`;
+        tc.steps.forEach(step => {
+            formattedText += `  - ${step}\n`;
+        });
+        formattedText += '\n';
+    });
+
+    return formattedText;
+}
+
+// Function to copy test cases and show success message
+function copyTestCases(element, event) {
+    const testCasesText = formatTestCasesForCopy(element);
+    if (!testCasesText) return;
+
+    navigator.clipboard.writeText(testCasesText).then(() => {
+        // Show success message
+        const successMessage = document.createElement('div');
+        successMessage.className = 'copy-success-message';
+        successMessage.textContent = 'Test cases copied!';
+        successMessage.style.position = 'fixed';
+        successMessage.style.left = `${event.clientX + 10}px`;
+        successMessage.style.top = `${event.clientY - 20}px`;
+        successMessage.style.backgroundColor = '#4CAF50';
+        successMessage.style.color = 'white';
+        successMessage.style.padding = '5px 10px';
+        successMessage.style.borderRadius = '3px';
+        successMessage.style.zIndex = '10000';
+        document.body.appendChild(successMessage);
+
+        // Remove message after animation
+        setTimeout(() => {
+            successMessage.style.opacity = '0';
+            successMessage.style.transition = 'opacity 0.5s';
+            setTimeout(() => successMessage.remove(), 500);
+        }, 1000);
+    });
+}
+
+// Add hover and click listeners to interactive elements
 document.addEventListener('mouseover', (e) => {
-    const interactiveElements = 'button, input, select, a, form, [role="button"]';
+    if (!tooltipContainer || !tooltip) return;
+
+    // Ignore elements inside our tooltip
+    if (tooltipContainer.contains(e.target)) return;
+
+    const interactiveElements = 'button, input, select, a, form, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [role="menuitem"], textarea';
     const target = e.target.closest(interactiveElements);
     
-    if (target) {
+    if (target && (!isTooltipLocked || target === currentElement)) {
         target.classList.add('qa-helper-highlight');
         
         const testCases = getTestCases(target);
+        if (!testCases) return;
+
         const elementIdentifier = getElementIdentifier(target);
         
         const testCasesHtml = testCases.map(tc => `
@@ -363,26 +748,57 @@ document.addEventListener('mouseover', (e) => {
             </div>
         `).join('');
         
-        tooltip.innerHTML = `
+        const formattedTestCases = `
             <div class="tooltip-content">
                 <strong>Element: ${target.tagName.toLowerCase()} ${elementIdentifier}</strong>
                 <div class="test-cases">
                     ${testCasesHtml}
                 </div>
+                <div class="tooltip-hint">(Click highlighted element to copy test cases)</div>
             </div>
         `;
         
-        const rect = target.getBoundingClientRect();
-        tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
-        tooltip.style.left = `${rect.left + window.scrollX}px`;
-        tooltip.style.display = 'block';
+        showTooltip(target, formattedTestCases);
+    }
+});
+
+// Add click handler to copy test cases
+document.addEventListener('click', (e) => {
+    const copyButton = e.target.closest('.qa-helper-copy-button');
+    if (copyButton) {
+        // If clicking the copy button, copy test cases for the current element
+        if (currentElement) {
+            copyTestCases(currentElement, e);
+        }
+        return;
+    }
+    
+    // For other elements, copy on click if they're highlighted
+    const target = e.target.closest('.qa-helper-highlight');
+    if (!target) return;
+
+    copyTestCases(target, e);
+});
+
+// Handle mouse events for interactive elements
+document.addEventListener('mouseover', (e) => {
+    if (!tooltipContainer || !tooltip || isTooltipLocked) return;
+
+    const interactiveElements = 'button, input, select, a, form, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [role="menuitem"], textarea';
+    const target = e.target.closest(interactiveElements);
+    
+    if (target === currentElement) {
+        tooltipContainer.style.display = 'block';
+    } else if (!isTooltipHovered && target !== currentElement) {
+        hideTooltip();
     }
 });
 
 document.addEventListener('mouseout', (e) => {
-    const target = e.target.closest('button, input, select, a, form, [role="button"]');
-    if (target) {
-        target.classList.remove('qa-helper-highlight');
-        tooltip.style.display = 'none';
+    if (!tooltipContainer || !tooltip || isTooltipLocked || isTooltipHovered) return;
+
+    const target = e.target.closest('.qa-helper-highlight');
+    if (target === currentElement && !tooltipContainer.contains(e.relatedTarget)) {
+        hideTooltip();
     }
 });
