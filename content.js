@@ -15,13 +15,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Function to collect all test cases from interactive elements on the page
 function getAllTestCasesFromPage() {
-    const interactiveElements = document.querySelectorAll('button, input, select, a, form, [role="button"]');
+    const interactiveElements = document.querySelectorAll('button, input, select, a, form, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [role="menuitem"], textarea');
     const allTestCases = [];
+    const processedElements = new Set(); // To avoid duplicate elements
 
     interactiveElements.forEach(element => {
-        const elementTestCases = getTestCases(element);
+        // Create a unique identifier for the element to avoid duplicates
+        const elementKey = getElementUniqueKey(element);
+        if (processedElements.has(elementKey)) {
+            return;
+        }
+        processedElements.add(elementKey);
+
+        // Get element information
         const elementType = element.tagName.toLowerCase();
+        const elementRole = element.getAttribute('role');
         const elementIdentifier = getElementIdentifier(element);
+
+        // Determine which test cases to use based on element type and role
+        let elementTestCases = [];
+        if (elementRole && testCaseSuggestions[elementRole]) {
+            elementTestCases = testCaseSuggestions[elementRole];
+        } else if (testCaseSuggestions[elementType]) {
+            elementTestCases = testCaseSuggestions[elementType];
+        } else {
+            elementTestCases = testCaseSuggestions.default || [];
+        }
 
         elementTestCases.forEach(testCase => {
             // Create a unique test case by combining element info with the test case
@@ -33,6 +52,18 @@ function getAllTestCasesFromPage() {
     });
 
     return allTestCases;
+}
+
+// Function to generate a unique key for an element
+function getElementUniqueKey(element) {
+    const id = element.id;
+    const classes = Array.from(element.classList).join(' ');
+    const text = element.textContent?.trim();
+    const type = element.type;
+    const name = element.name;
+    const role = element.getAttribute('role');
+    
+    return `${id}-${classes}-${text}-${type}-${name}-${role}`;
 }
 
 // Function to get a human-readable identifier for an element
@@ -60,6 +91,106 @@ function formatTestCase(testCase, elementType, elementIdentifier) {
 
 // Test case suggestions for different element types
 const testCaseSuggestions = {
+    // Default test cases for any interactive element
+    default: [
+        {
+            title: "Basic interaction",
+            steps: [
+                "1. Locate the element on the page",
+                "2. Verify element is visible and accessible",
+                "3. Interact with the element (click, input, etc.)",
+                "4. Verify expected behavior occurs"
+            ]
+        },
+        {
+            title: "Keyboard accessibility",
+            steps: [
+                "1. Tab to the element using keyboard",
+                "2. Verify focus indicator is visible",
+                "3. Interact using keyboard (Enter/Space)",
+                "4. Verify same behavior as mouse interaction"
+            ]
+        }
+    ],
+
+    // Role-specific test cases
+    "checkbox": [
+        {
+            title: "Checkbox state toggle",
+            steps: [
+                "1. Locate the checkbox",
+                "2. Verify initial state (checked/unchecked)",
+                "3. Click the checkbox",
+                "4. Verify state changes correctly",
+                "5. Click again",
+                "6. Verify returns to initial state"
+            ]
+        }
+    ],
+
+    "radio": [
+        {
+            title: "Radio button selection",
+            steps: [
+                "1. Locate the radio button group",
+                "2. Note the currently selected option",
+                "3. Click a different radio button",
+                "4. Verify only one option is selected",
+                "5. Verify previous selection is deselected"
+            ]
+        }
+    ],
+
+    "tab": [
+        {
+            title: "Tab panel switching",
+            steps: [
+                "1. Locate the tab element",
+                "2. Click the tab",
+                "3. Verify correct panel is displayed",
+                "4. Verify other panels are hidden",
+                "5. Verify tab is marked as active"
+            ]
+        }
+    ],
+
+    "menuitem": [
+        {
+            title: "Menu item selection",
+            steps: [
+                "1. Open the parent menu",
+                "2. Locate the menu item",
+                "3. Click the menu item",
+                "4. Verify expected action occurs",
+                "5. Verify menu closes after selection"
+            ]
+        }
+    ],
+
+    textarea: [
+        {
+            title: "Text area input handling",
+            steps: [
+                "1. Click the text area",
+                "2. Type a long text with multiple lines",
+                "3. Verify text wrapping works correctly",
+                "4. Verify scrolling works if content overflows",
+                "5. Test copy/paste functionality"
+            ]
+        },
+        {
+            title: "Text area validation",
+            steps: [
+                "1. Check for character limit if specified",
+                "2. Test with maximum allowed length",
+                "3. Try exceeding the limit",
+                "4. Verify appropriate error message",
+                "5. Check if newlines are properly handled"
+            ]
+        }
+    ],
+
+
     button: [
         {
             title: "Click functionality",
