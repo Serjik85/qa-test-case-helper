@@ -1,10 +1,16 @@
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getAllTestCases") {
-        const testCases = getAllTestCasesFromPage();
-        sendResponse({ testCases });
+        try {
+            const testCases = getAllTestCasesFromPage();
+            console.log('Generated test cases:', testCases); // Debug log
+            sendResponse({ testCases: testCases });
+        } catch (error) {
+            console.error('Error generating test cases:', error);
+            sendResponse({ error: error.message });
+        }
     }
-    return true;
+    return true; // Keep the message channel open for async response
 });
 
 // Function to collect all test cases from interactive elements on the page

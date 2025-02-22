@@ -7,7 +7,12 @@
   "homepage_url": "https://serhii-tkachenko.com",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
