@@ -1,0 +1,36 @@
+.qa-helper-highlight {
+    outline: 2px solid #4CAF50 !important;
+    outline-offset: 2px !important;
+    background-color: rgba(76, 175, 80, 0.1) !important;
+}
+
+.qa-helper-tooltip {
+    position: absolute;
+    z-index: 10000;
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    max-width: 300px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: none;
+    font-family: Arial, sans-serif;
+    line-height: 1.4;
+}
+
+.qa-helper-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    border-width: 0 10px 10px 10px;
+    border-style: solid;
+    border-color: transparent transparent #333 transparent;
+}
+
+.qa-helper-tooltip strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #4CAF50;
+}
