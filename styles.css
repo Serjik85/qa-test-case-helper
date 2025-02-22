@@ -9,11 +9,11 @@
     z-index: 10000;
     background-color: #333;
     color: white;
-    padding: 10px;
-    border-radius: 4px;
+    padding: 15px;
+    border-radius: 6px;
     font-size: 14px;
-    max-width: 300px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    max-width: 400px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     display: none;
     font-family: Arial, sans-serif;
     line-height: 1.4;
@@ -29,8 +29,38 @@
     border-color: transparent transparent #333 transparent;
 }
 
+.qa-helper-tooltip .tooltip-content {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
 .qa-helper-tooltip strong {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
     color: #4CAF50;
+    font-size: 15px;
+}
+
+.qa-helper-tooltip .test-case {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.qa-helper-tooltip .test-case:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.qa-helper-tooltip .steps {
+    margin-top: 8px;
+    margin-left: 15px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.qa-helper-tooltip .step {
+    margin: 5px 0;
+    font-size: 13px;
+    line-height: 1.4;
 }
