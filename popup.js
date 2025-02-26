@@ -54,7 +54,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load initial state
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        if (!tab) {
+            throw new Error('No active tab found');
+        }
+
+        const url = tab.url || '';
+        if (url.indexOf('chrome://') === 0 || url.indexOf('chrome-extension://') === 0) {
             statusDiv.innerHTML = `
                 <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                 Extension cannot run on this page
@@ -67,19 +72,43 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const result = await chrome.storage.local.get(['enabled']);
         const enabled = result.enabled !== false;
-        updateUI(enabled);
 
-        // Check if content script is loaded
+        // Try to ping the content script with timeout
         try {
-            await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+            const response = await Promise.race([
+                new Promise((resolve, reject) => {
+                    chrome.tabs.sendMessage(tab.id, { action: 'ping' }, response => {
+                        if (chrome.runtime.lastError) {
+                            reject(chrome.runtime.lastError);
+                        } else {
+                            resolve(response);
+                        }
+                    });
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), 1000)
+                )
+            ]);
+
+            if (response && response.status === 'ok') {
+                updateUI(enabled);
+            }
         } catch (error) {
+            console.warn('Content script not responding:', error);
             if (enabled) {
-                // Inject content script if it's not loaded and extension is enabled
-                await chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    files: ['content.js']
-                });
-                updateUI(true);
+                // Try to inject the content script
+                try {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['content.js']
+                    });
+                    updateUI(true);
+                } catch (injectError) {
+                    console.error('Failed to inject content script:', injectError);
+                    updateUI(false);
+                }
+            } else {
+                updateUI(false);
             }
         }
     } catch (error) {
@@ -93,51 +122,107 @@ document.addEventListener('DOMContentLoaded', async function() {
     toggleSwitch.addEventListener('change', async function() {
         const enabled = this.checked;
         try {
+            // Update storage first
             await chrome.storage.local.set({ enabled });
-            updateUI(enabled);
 
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (tab && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
-                if (enabled) {
-                    // Inject content script if enabling
+            if (!tab) {
+                throw new Error('No active tab found');
+            }
+
+            const url = tab.url || '';
+            if (url.indexOf('chrome://') === 0 || url.indexOf('chrome-extension://') === 0) {
+                throw new Error('Cannot run on this page');
+            }
+
+            if (enabled) {
+                // Inject content script if enabling
+                try {
                     await chrome.scripting.executeScript({
                         target: { tabId: tab.id },
                         files: ['content.js']
                     });
+                } catch (error) {
+                    console.warn('Script may already be injected:', error);
                 }
-                // Notify content script
+            }
+
+            // Update UI first
+            updateUI(enabled);
+
+            // Then try to notify content script
+            try {
                 await chrome.tabs.sendMessage(tab.id, { action: 'toggleExtension', enabled });
+            } catch (error) {
+                console.error('Error communicating with content script:', error);
+                // If we can't communicate and extension should be enabled, try re-injecting
+                if (enabled) {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['content.js']
+                    });
+                    await chrome.tabs.sendMessage(tab.id, { action: 'toggleExtension', enabled });
+                }
             }
         } catch (error) {
             console.error('Error toggling extension:', error);
-            statusDiv.textContent = 'Error: Could not update extension state';
-            statusDiv.style.color = '#f44336';
-            statusDiv.style.backgroundColor = '#ffebee';
+            // Revert the toggle state
+            this.checked = !enabled;
+            updateUI(!enabled);
+            // Show error
+            statusDiv.innerHTML = `
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                ${error.message}
+            `;
+            statusDiv.style.backgroundColor = '#FFEBEE';
+            statusDiv.style.color = '#D32F2F';
         }
     });
 
     async function updateExtensionState(enabled) {
         try {
-            await chrome.storage.local.set({ enabled: enabled });
-            
-            const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-            if (tab && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
-                if (enabled) {
-                    // If enabling, make sure content script is injected
+            // Update storage first
+            await chrome.storage.local.set({ enabled });
+
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab) {
+                throw new Error('No active tab found');
+            }
+
+            const url = tab.url || '';
+            if (url.indexOf('chrome://') === 0 || url.indexOf('chrome-extension://') === 0) {
+                throw new Error('Cannot run on this page');
+            }
+
+            if (enabled) {
+                // Inject content script if enabling
+                try {
                     await chrome.scripting.executeScript({
                         target: { tabId: tab.id },
                         files: ['content.js']
                     });
+                } catch (error) {
+                    console.warn('Script may already be injected:', error);
                 }
-                // Notify content script about the state change
-                await chrome.tabs.sendMessage(tab.id, { action: 'toggleExtension', enabled: enabled });
             }
-            
-            // Update UI
-            statusDiv.textContent = enabled ? '✓ Extension is active and running' : '✗ Extension is disabled';
-            statusDiv.style.color = enabled ? '#4CAF50' : '#f44336';
-            generateTestButton.disabled = !enabled;
-            copyButton.disabled = !enabled;
+
+            // Update UI first
+            updateUI(enabled);
+
+            // Then try to notify content script
+            try {
+                await chrome.tabs.sendMessage(tab.id, { action: 'toggleExtension', enabled });
+            } catch (error) {
+                console.error('Error communicating with content script:', error);
+                // If we can't communicate and extension should be enabled, try re-injecting
+                if (enabled) {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['content.js']
+                    });
+                    await chrome.tabs.sendMessage(tab.id, { action: 'toggleExtension', enabled });
+                }
+            }
 
             if (enabled) {
                 // Recheck status after a short delay
@@ -145,8 +230,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         } catch (error) {
             console.error('Error updating extension state:', error);
-            statusDiv.textContent = 'Error: Could not update extension state';
-            statusDiv.style.color = '#f44336';
+            // Show error
+            statusDiv.innerHTML = `
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                ${error.message}
+            `;
+            statusDiv.style.backgroundColor = '#FFEBEE';
+            statusDiv.style.color = '#D32F2F';
+            updateUI(false);
         }
     }
 
@@ -158,25 +249,61 @@ document.addEventListener('DOMContentLoaded', async function() {
                 throw new Error('No active tab found');
             }
 
-            // Try to ping the content script
-            const response = await new Promise((resolve, reject) => {
-                chrome.tabs.sendMessage(tab.id, { action: 'ping' }, response => {
-                    if (chrome.runtime.lastError) {
-                        reject(chrome.runtime.lastError);
-                    } else {
-                        resolve(response);
-                    }
-                });
-            });
-
-            if (response && response.status === 'ok') {
-                updateUI(true);
-                return true;
+            const url = tab.url || '';
+            if (url.indexOf('chrome://') === 0 || url.indexOf('chrome-extension://') === 0) {
+                throw new Error('Cannot run on this page');
             }
-            updateUI(false);
-            return false;
+
+            // Try to ping the content script with timeout
+            try {
+                const response = await Promise.race([
+                    new Promise((resolve, reject) => {
+                        chrome.tabs.sendMessage(tab.id, { action: 'ping' }, response => {
+                            if (chrome.runtime.lastError) {
+                                reject(chrome.runtime.lastError);
+                            } else {
+                                resolve(response);
+                            }
+                        });
+                    }),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout waiting for content script')), 1000)
+                    )
+                ]);
+
+                if (response && response.status === 'ok') {
+                    updateUI(true);
+                    return true;
+                }
+                throw new Error('Invalid response from content script');
+            } catch (error) {
+                console.warn('Content script check failed:', error);
+                // Try to inject the content script
+                try {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['content.js']
+                    });
+                    // Try ping again after injection
+                    const response = await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+                    if (response && response.status === 'ok') {
+                        updateUI(true);
+                        return true;
+                    }
+                } catch (injectError) {
+                    console.error('Failed to inject content script:', injectError);
+                }
+                updateUI(false);
+                return false;
+            }
         } catch (error) {
             console.error('Extension status check failed:', error);
+            statusDiv.innerHTML = `
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                ${error.message}
+            `;
+            statusDiv.style.backgroundColor = '#FFEBEE';
+            statusDiv.style.color = '#D32F2F';
             updateUI(false);
             return false;
         }
