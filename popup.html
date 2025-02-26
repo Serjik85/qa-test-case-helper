@@ -4,79 +4,252 @@
     <meta charset="UTF-8">
     <style>
         body {
-            width: 400px;
-            padding: 15px;
-            font-family: Arial, sans-serif;
+            width: 450px;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            background: #ffffff;
+            color: #1a1a1a;
         }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
         .title {
-            color: #4CAF50;
-            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #2E7D32;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .description {
-            font-size: 14px;
-            line-height: 1.4;
-            color: #333;
-            margin-bottom: 15px;
+
+        .title-icon {
+            width: 28px;
+            height: 28px;
+            fill: #2E7D32;
         }
-        .status {
-            margin-top: 10px;
-            padding: 8px;
-            background-color: #e8f5e9;
-            border-radius: 4px;
-            color: #2e7d32;
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .test-cases-area {
-            width: 100%;
-            min-height: 200px;
-            margin: 10px 0;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            resize: vertical;
-            font-family: inherit;
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
         }
-        .button {
-            display: inline-block;
-            padding: 8px 16px;
-            margin: 5px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
         }
-        .button:hover {
-            background-color: #45a049;
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
         }
-        .button:active {
-            background-color: #3d8b40;
+
+        input:checked + .toggle-slider {
+            background-color: #4CAF50;
         }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .description {
+            font-size: 15px;
+            line-height: 1.5;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
         .buttons-container {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .button {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .button-primary {
+            background-color: #2E7D32;
+            color: white;
+            box-shadow: 0 2px 4px rgba(46, 125, 50, 0.2);
+        }
+
+        .button-secondary {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .test-cases-area {
+            width: 100%;
+            min-height: 220px;
+            padding: 12px;
+            border: 1px solid #E0E0E0;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            background: #FAFAFA;
+            transition: border-color 0.2s ease;
+        }
+
+        .test-cases-area:focus {
+            outline: none;
+            border-color: #2E7D32;
+            background: #ffffff;
+        }
+
+        .test-cases-area::placeholder {
+            color: #999;
+        }
+
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .status svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .support {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 16px;
+        }
+
+        .support a {
+            color: #2E7D32;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .support a:hover {
+            color: #1B5E20;
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <h2 class="title">Test Case Helper</h2>
+    <div class="header">
+        <h1 class="title">
+            <svg class="title-icon" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+            Test Case Helper
+        </h1>
+        <div class="toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="extensionToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+
     <div class="description">
-        Generate test cases for the current page or hover over elements to see suggestions.
+        Generate comprehensive test cases for all interactive elements on the current page, or hover over specific elements to see detailed test suggestions.
     </div>
+
     <div class="buttons-container">
-        <button id="generateTest" class="button">Generate Test</button>
-        <button id="copyToClipboard" class="button">Copy to Clipboard</button>
+        <button id="generateTest" class="button button-primary">
+            <svg viewBox="0 0 24 24">
+                <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+            Generate Test
+        </button>
+        <button id="copyToClipboard" class="button button-secondary">
+            <svg viewBox="0 0 24 24">
+                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+            </svg>
+            Copy to Clipboard
+        </button>
     </div>
-    <textarea id="testCasesArea" class="test-cases-area" placeholder="Test cases will appear here..."></textarea>
+
+    <textarea id="testCasesArea" class="test-cases-area" 
+        placeholder="No test cases generated yet. Click 'Generate Test' to analyze all interactive elements on the page. If no results appear, try refreshing the page and ensuring you're not on a restricted site (like chrome:// pages)."></textarea>
+
     <div class="status">
-        ✓ Extension is active and running
+        <svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        Extension is active and running
     </div>
-    <div class="support" style="margin-top: 15px; font-size: 12px; border-top: 1px solid #e0e0e0; padding-top: 10px;">
+
+    <div class="support">
         <p>Created by <a href="https://serhii-tkachenko.com" target="_blank">Serhii Tkachenko</a></p>
         <p>Support: <a href="mailto:me@serhii-tkachenko.com">me@serhii-tkachenko.com</a></p>
     </div>
+
     <script src="popup.js"></script>
 </body>
 </html>

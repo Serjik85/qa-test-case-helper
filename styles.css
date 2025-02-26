@@ -8,24 +8,30 @@
     position: fixed;
     z-index: 10000;
     display: none;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
 }
 
-/* Tooltip arrow when positioned below element */
+/* Tooltip arrow */
 .qa-helper-tooltip::before {
     content: '';
     position: absolute;
-    top: -8px;
-    left: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     border-style: solid;
-    border-width: 0 8px 8px 8px;
+    border-width: 8px;
+    pointer-events: none;
+}
+
+/* Arrow when tooltip is below element */
+.qa-helper-tooltip::before {
+    top: -8px;
     border-color: transparent transparent rgba(51, 51, 51, 0.98) transparent;
 }
 
-/* Tooltip arrow when positioned above element */
+/* Arrow when tooltip is above element */
 .qa-helper-tooltip-container.tooltip-above .qa-helper-tooltip::before {
     top: auto;
     bottom: -8px;
-    border-width: 8px 8px 0 8px;
     border-color: rgba(51, 51, 51, 0.98) transparent transparent transparent;
 }
 
@@ -33,7 +39,6 @@
     background-color: rgba(51, 51, 51, 0.98);
     color: white;
     padding: 15px;
-    padding-top: 40px; /* Space for buttons */
     border-radius: 8px;
     font-size: 14px;
     width: 400px;
@@ -43,6 +48,21 @@
     position: relative;
     pointer-events: auto;
     backdrop-filter: blur(5px);
+    margin: 8px 0; /* Space for arrow */
+    z-index: 10001; /* Ensure tooltip is above other elements */
+}
+
+.tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-right: 30px; /* Space for close button */
+}
+
+.tooltip-header strong {
+    margin-right: 10px;
+    flex: 1;
 }
 
 .qa-helper-close-button {
@@ -51,28 +71,50 @@
     right: 10px;
     background: none;
     border: none;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.7);
     font-size: 20px;
     cursor: pointer;
     padding: 0 6px;
     border-radius: 4px;
+    transition: color 0.2s, background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
 }
 
 .qa-helper-close-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .qa-helper-copy-button {
-    position: absolute;
-    top: 10px;
-    right: 70px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
     background: #4CAF50;
     border: none;
     color: white;
-    padding: 4px 12px;
+    padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 13px;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.qa-helper-copy-button svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.9;
+}
+
+.qa-helper-copy-button:hover {
+    background-color: #45a049;
+}
+
+.qa-helper-copy-button:active {
+    transform: scale(0.95);
 }
 
 .qa-helper-copy-button:hover {
