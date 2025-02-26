@@ -6,14 +6,8 @@
   "author": "Serhii Tkachenko",
   "homepage_url": "https://serhii-tkachenko.com",
   "permissions": [
-    "activeTab",
     "scripting",
-    "tabs",
     "storage"
-  ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
