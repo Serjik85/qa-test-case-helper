@@ -69,11 +69,4 @@ If you encounter any issues or have suggestions for improvement, please feel fre
 
 ## License
 
-<<<<<<< HEAD
-Copyright © 2025 Serhii Tkachenko
-=======
-Copyright © 2025 Serhii Tkachenko.
->>>>>>> 80551eef1d24e057a58497947cbf413ed34d4b38
-=======
-# qa-test-case-helper
-
+Copyright © 2025 Serhii Tkachenko. All rights reserved.

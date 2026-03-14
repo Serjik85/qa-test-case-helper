@@ -3,11 +3,12 @@ let tooltipContainer = null;
 let tooltip = null;
 let closeButton = null;
 let copyButton = null;
-let lockButton = null;
 let isTooltipLocked = false;
 let isTooltipHovered = false;
 let currentElement = null;
 let isEnabled = true; // Default to enabled
+
+const MAX_ELEMENTS = 200;
 
 // Test case suggestions for different element types
 const testCaseSuggestions = {
@@ -42,6 +43,14 @@ const testCaseSuggestions = {
                 "4. Verify expected action occurs",
                 "5. Verify any state changes or UI updates"
             ]
+        },
+        {
+            title: "Button disabled state",
+            steps: [
+                "1. Verify button disabled state when applicable",
+                "2. Confirm disabled button cannot be clicked",
+                "3. Verify visual indication of disabled state"
+            ]
         }
     ],
     input: [
@@ -62,6 +71,80 @@ const testCaseSuggestions = {
                 "3. Verify error message appears",
                 "4. Verify input is marked as invalid"
             ]
+        },
+        {
+            title: "Boundary values",
+            steps: [
+                "1. Enter minimum allowed value",
+                "2. Verify it is accepted",
+                "3. Enter maximum allowed value",
+                "4. Verify it is accepted",
+                "5. Enter value beyond limits and verify rejection"
+            ]
+        },
+        {
+            title: "Special characters & XSS",
+            steps: [
+                "1. Enter special characters: <, >, &, ', \"",
+                "2. Verify they are handled safely",
+                "3. Enter a script tag and verify it is not executed"
+            ]
+        }
+    ],
+    'input[type=email]': [
+        {
+            title: "Email format validation",
+            steps: [
+                "1. Enter valid email (user@example.com) — verify accepted",
+                "2. Enter email without @ — verify rejected",
+                "3. Enter email without domain — verify rejected",
+                "4. Enter email with spaces — verify rejected"
+            ]
+        }
+    ],
+    'input[type=password]': [
+        {
+            title: "Password field security",
+            steps: [
+                "1. Verify password characters are masked",
+                "2. Enter password shorter than minimum — verify rejected",
+                "3. Enter very long password — verify no truncation silently",
+                "4. Verify password is not stored in browser autofill unexpectedly"
+            ]
+        }
+    ],
+    'input[type=number]': [
+        {
+            title: "Numeric input validation",
+            steps: [
+                "1. Enter valid number — verify accepted",
+                "2. Enter text characters — verify rejected",
+                "3. Enter negative number — verify handled correctly",
+                "4. Enter decimal value — verify step constraint",
+                "5. Verify min/max attributes are enforced"
+            ]
+        }
+    ],
+    'input[type=checkbox]': [
+        {
+            title: "Checkbox toggle",
+            steps: [
+                "1. Verify initial checked/unchecked state",
+                "2. Click to toggle — verify state changes",
+                "3. Verify associated label is clickable",
+                "4. Verify keyboard toggle with Space key"
+            ]
+        }
+    ],
+    'input[type=radio]': [
+        {
+            title: "Radio button selection",
+            steps: [
+                "1. Verify only one option can be selected at a time",
+                "2. Click each radio option in the group",
+                "3. Verify previously selected option is deselected",
+                "4. Verify keyboard navigation with arrow keys within group"
+            ]
         }
     ],
     select: [
@@ -74,6 +157,14 @@ const testCaseSuggestions = {
                 "4. Verify selected option is displayed",
                 "5. Verify any dependent UI updates"
             ]
+        },
+        {
+            title: "Default selection",
+            steps: [
+                "1. Verify default selected option on load",
+                "2. Verify placeholder option (if any) cannot be submitted",
+                "3. Verify keyboard navigation (arrow keys) through options"
+            ]
         }
     ],
     link: [
@@ -84,6 +175,33 @@ const testCaseSuggestions = {
                 "2. Click the link",
                 "3. Verify correct navigation occurs",
                 "4. Test browser back navigation"
+            ]
+        },
+        {
+            title: "External link behaviour",
+            steps: [
+                "1. Check if link opens in new tab (target=_blank)",
+                "2. Verify rel=noopener is set on external links",
+                "3. Verify URL is correct and not broken"
+            ]
+        }
+    ],
+    textarea: [
+        {
+            title: "Text area input",
+            steps: [
+                "1. Click the textarea and type text",
+                "2. Verify text is accepted and displayed correctly",
+                "3. Enter text exceeding max length (if set) and verify truncation",
+                "4. Verify resize behaviour (if resizable)"
+            ]
+        },
+        {
+            title: "Multi-line text handling",
+            steps: [
+                "1. Enter text with line breaks",
+                "2. Verify line breaks are preserved",
+                "3. Paste a large block of text and verify performance"
             ]
         }
     ],
@@ -101,9 +219,17 @@ const testCaseSuggestions = {
             title: "Form validation",
             steps: [
                 "1. Submit empty form",
-                "2. Verify validation messages",
+                "2. Verify validation messages appear for required fields",
                 "3. Fill invalid data",
-                "4. Verify error handling"
+                "4. Verify error handling and messages"
+            ]
+        },
+        {
+            title: "Form reset",
+            steps: [
+                "1. Fill some fields",
+                "2. Click Reset (if available)",
+                "3. Verify all fields return to default values"
             ]
         }
     ]
@@ -535,10 +661,12 @@ function getAllInteractiveElements() {
 // Function to collect test cases for all elements
 function collectAllTestCases() {
     const elements = getAllInteractiveElements();
+    const limited = elements.length > MAX_ELEMENTS ? elements.slice(0, MAX_ELEMENTS) : elements;
+    const truncated = elements.length > MAX_ELEMENTS;
     const elementsByType = {};
 
     // Group elements by their type
-    elements.forEach(element => {
+    limited.forEach(element => {
         let type = element.tagName.toLowerCase();
         if (element.type) {
             type = `${type}[type=${element.type}]`;
@@ -554,8 +682,8 @@ function collectAllTestCases() {
 
     // Generate test cases for each type
     const allTestCases = [];
-    for (const [type, elements] of Object.entries(elementsByType)) {
-        elements.forEach(element => {
+    for (const [type, typeElements] of Object.entries(elementsByType)) {
+        typeElements.forEach(element => {
             const testCases = getTestCases(element);
             if (!testCases) return;
 
@@ -568,21 +696,19 @@ function collectAllTestCases() {
 
     // Sort by element type and identifier
     allTestCases.sort((a, b) => a.element.localeCompare(b.element));
-    return allTestCases;
+    return { testCases: allTestCases, truncated, total: elements.length };
 }
 
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('Received message:', request);
-
     if (request.action === 'ping') {
         sendResponse({ status: 'ok' });
         return true;
     }
 
     if (request.action === 'getAllTestCases') {
-        const allTestCases = collectAllTestCases();
-        sendResponse({ testCases: allTestCases });
+        const result = collectAllTestCases();
+        sendResponse(result);
         return true;
     }
 
@@ -607,24 +733,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             initializeEventListeners();
         }
         sendResponse({ status: 'ok' });
-        return true;
-    }
-
-    if (request.action === 'getAllTestCases') {
-        const testCases = [];
-        const elements = document.querySelectorAll('button, input, select, a, form, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [role="menuitem"], textarea');
-        
-        elements.forEach(element => {
-            const cases = getTestCases(element);
-            if (cases) {
-                testCases.push({
-                    element: getElementIdentifier(element),
-                    testCases: cases
-                });
-            }
-        });
-        
-        sendResponse({ testCases });
         return true;
     }
 });

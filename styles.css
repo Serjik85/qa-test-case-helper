@@ -117,9 +117,6 @@
     transform: scale(0.95);
 }
 
-.qa-helper-copy-button:hover {
-    background-color: #45a049;
-}
 
 .qa-helper-lock-button {
     position: absolute;
