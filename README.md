@@ -1,4 +1,4 @@
-# QA Test Case Helper Chrome Extension v1.2
+# QA Test Case Helper Chrome Extension v1.3
 
 This Chrome extension helps QA engineers and testers by highlighting testable elements on web pages and suggesting relevant test cases. Created by [Serhii Tkachenko](https://serhii-tkachenko.com).
 
